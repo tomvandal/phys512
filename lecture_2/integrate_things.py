@@ -15,6 +15,7 @@ def integrate(fun,xmin,xmax,dx_targ,ord=2,verbose=False):
     if nn>0:
         npt=npt+(ord-nn)
     assert(npt%(ord)==1)
+    npt=np.int(npt)
 
     x=np.linspace(xmin,xmax,npt)
     dx=np.median(np.diff(x))    
@@ -22,7 +23,7 @@ def integrate(fun,xmin,xmax,dx_targ,ord=2,verbose=False):
 
     #we could have a loop here, but note that we can also reshape our data, then som along columns, and only then
     #apply coefficients.  Some care is required with the first and last points because they only show up once.
-    mat=np.reshape(dat[:-1],[(npt-1)/(ord),ord]).copy()
+    mat=np.reshape(dat[:-1],[(npt-1)//(ord),ord]).copy()
     mat[0,0]=mat[0,0]+dat[-1] #as a hack, we can add the last point to the first
     mat[1:,0]=2*mat[1:,0] #double everythin in the first column, since each element appears as the last element in the previous row
 
