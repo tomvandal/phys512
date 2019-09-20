@@ -5,6 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
 
+# where plot will be saved
+plotfile = None  # "q2.png"
+
 
 # the routine asked for in the problem set
 def interp(spln, xnew, xknown=None, deriv_true=None):
@@ -78,6 +81,7 @@ yinter, einter = interp(spln, xinter, xknown=temp, deriv_true=dvdt)
 print("Mean estimated error: {}".format(np.mean(einter)))
 
 # plot of the data along the interpolation
+# Note: the error is not visible unless we zoom in
 plt.plot(temp, volt, 'k.', label='Lakeshore data')
 plt.plot(xinter, yinter, 'r', label='Spline interpolation')
 plt.fill_between(xinter, yinter+3*einter, yinter-3*einter,
@@ -86,4 +90,8 @@ plt.fill_between(xinter, yinter+3*einter, yinter-3*einter,
 plt.xlabel('Temperature $T$ (K)', fontsize=14)
 plt.ylabel('Voltage $V$ (V)', fontsize=14)
 plt.legend(fontsize=14)
-plt.show()
+if plotfile is not None:
+    plt.savefig(plotfile)
+    plt.close()
+else:
+    plt.show()

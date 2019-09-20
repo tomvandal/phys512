@@ -25,7 +25,7 @@ def fun2(x, sig=sig):
 # compared to the lazy integration method when we use the efficient
 # (a bit less as we see when neval is high).
 print("Integrating exp")
-a, b = -1, 1
+a, b = -1.0, 1.0
 pred = np.exp(b) - np.exp(a)
 f_lazy, myerr_lazy, neval_lazy = integ.lazy_integrate(fun0, a, b, 1e-3)
 f_eff, myerr_eff, neval_eff = integ.eff_integrate(fun0, a, b, 1e-3)
@@ -40,7 +40,7 @@ print("  Efficient method: f, myerr, neval= {}, {}, {}. Err={}".format(
                                                                   f_eff-pred))
 
 print("Integrating fun1")
-a, b = -1, 1
+a, b = -1.0, 1.0
 pred = np.arctan(b) - np.arctan(a)
 f_lazy, myerr_lazy, neval_lazy = integ.lazy_integrate(fun1, a, b, 1e-4)
 f_eff, myerr_eff, neval_eff = integ.eff_integrate(fun1, a, b, 1e-4)
@@ -55,7 +55,7 @@ print("  Efficient method: f, myerr, neval= {}, {}, {}. Err={}".format(
                                                                   f_eff-pred))
 
 print("Integrating fun2")
-a, b = -1, 1
+a, b = -5.0, 5.0
 pred = (b-a) + np.sqrt(2*np.pi)*sig
 f_lazy, myerr_lazy, neval_lazy = integ.lazy_integrate(fun2, a, b, 1e-4)
 f_eff, myerr_eff, neval_eff = integ.eff_integrate(fun2, a, b, 1e-4)

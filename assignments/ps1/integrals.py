@@ -48,12 +48,9 @@ def _simp2intv(fun, a, fa, b, fb):
     """
     c = (a + b) / 2.0
     fc = fun(c)  # one function integral!
-    inan = 0
     while np.any(np.isnan(fc)):  # eval nbhd of nan
-        inan += 1
         c += 1e-13
         fc = fun(c)
-        print(inan)
 
     s = (fa + 4*fc + fb) * (b-a)/6.0
     return (c, fc, s)
@@ -91,20 +88,20 @@ def _integ_simp(fun, a, fa, b, fb, c, fc, tot, tol, maxcalls=1000, calls=0):
     neval = 2  # one for each of the above
     split = left+right  # combine left and right
     myerr = np.abs(split - tot)  # equiv to f2-f1 of lazy method
-    if np.any(np.isnan(myerr)):
+    if np.any(np.isnan(myerr)):  # sanity check for exploration methods
         raise RuntimeError("Error array contains NaNs.")
     if np.all(myerr < tol):  # TOL OR 15*TOL???
-        integ = (16*split - tot)/15.0
+        integ = (16*split - tot) / 15.0
         return integ, myerr, neval
 
     # we add an explicit stopping condition to avoid crashing computer
     if calls < maxcalls:
         integ_left, lerr, leval = _integ_simp(fun, a, fa, c, fc,
-                                              cl, fcl, left, tol/2,
+                                              cl, fcl, left, tol/2.0,
                                               maxcalls=maxcalls,
                                               calls=calls+1)
         integ_right, rerr, reval = _integ_simp(fun, c, fc, b, fb,
-                                               cr, fcr, right, tol/2,
+                                               cr, fcr, right, tol/2.0,
                                                maxcalls=maxcalls,
                                                calls=calls+1)
         integ = integ_left + integ_right

@@ -10,8 +10,9 @@ import integrals as integ
 # R value and z array
 R = 1.0
 zvals = np.linspace(1e-3, 5, num=100)  # z values >, < & == R
-zvals = np.append(zvals, 1.0)
+zvals = np.append(zvals, R)
 zvals = np.unique(zvals)
+plotfile = None  # "q4.png", where plot is saved
 
 
 # setting up the problem
@@ -72,21 +73,28 @@ def quadloop(fun, a, b, zvals=zvals, args=()):
 #         exploration).
 
 
-# integrate fu to get E-field
-# the n*pi factors just result from the normalizations I neglected above
+# Integrate fu to get E-field.
+# The n*pi factors just result from the normalizations I neglected above.
+# The warning we get comes from the first step of the exploration described
+#   above.
 a, b = -1, 1  # bounds on u
 field_myint, myerr, neval = integ.eff_integrate(fu, a, b, 1e-7, maxcalls=1000)
 field_myint *= 2*np.pi  # rescale to be consistent with Efield
 field_quad, quaderr = quadloop(fu, a, b)
 field_quad *= 2*np.pi
 field_def = Efield(zvals) * 4*np.pi  # rescale to be consistent w/ integration
+# Note: Efield not defined at R (I explicitely assigned to NaN)
 
 # plotting with z offset to show the shapes
-plt.plot(zvals, field_def, "Analytical E")
-plt.plot(zvals+2, field_myint, "My integrator (z+2)")
-plt.plot(zvals+4, field_quad, "Scipy Quad (z+4)")
-plt.xlabe("$z$ + constant", fontsize=14)
+plt.plot(zvals, field_def, label="Analytical E")
+plt.plot(zvals+2, field_myint, label="My integrator (z+2)")
+plt.plot(zvals+4, field_quad, label="Scipy Quad (z+4)")
+plt.xlabel("$z$ + offset", fontsize=14)
 plt.ylabel("$E$", fontsize=14)
-plt.title("E-field of shell with $R=1$", fontsize=18)
+plt.title("E-field of shell with $R={}$".format(R), fontsize=18)
 plt.legend(fontsize=14)
-plt.show()
+if plotfile is not None:
+    plt.savefig(plotfile)
+    plt.close()
+else:
+    plt.show()
