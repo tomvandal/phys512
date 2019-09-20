@@ -48,6 +48,13 @@ def _simp2intv(fun, a, fa, b, fb):
     """
     c = (a + b) / 2.0
     fc = fun(c)  # one function integral!
+    inan = 0
+    while np.any(np.isnan(fc)):  # eval nbhd of nan
+        inan += 1
+        c += 1e-13
+        fc = fun(c)
+        print(inan)
+
     s = (fa + 4*fc + fb) * (b-a)/6.0
     return (c, fc, s)
 
@@ -84,7 +91,9 @@ def _integ_simp(fun, a, fa, b, fb, c, fc, tot, tol, maxcalls=1000, calls=0):
     neval = 2  # one for each of the above
     split = left+right  # combine left and right
     myerr = np.abs(split - tot)  # equiv to f2-f1 of lazy method
-    if myerr < tol:  # TOL OR 15*TOL???
+    if np.any(np.isnan(myerr)):
+        raise RuntimeError("Error array contains NaNs.")
+    if np.all(myerr < tol):  # TOL OR 15*TOL???
         integ = (16*split - tot)/15.0
         return integ, myerr, neval
 
@@ -122,6 +131,12 @@ def eff_integrate(fun, a, b, tol, maxcalls=1000):
         neval (int):   total number of function evaluations
     """
     fa, fb = fun(a), fun(b)  # store fun values to reuse in recursion
+    while np.any(np.isnan(fa)):  # eval nbhd of nan
+        b += 1e-13
+        fa = fun(a)
+    while np.any(np.isnan(fb)):  # eval nbhd of nan
+        b -= 1e-13
+        fb = fun(b)
     c, fc, tot = _simp2intv(fun, a, fa, b, fb)
     integ, myerr, neval = _integ_simp(fun, a, fa, b, fb, c, fc, tot, tol,
                                       maxcalls=maxcalls)
