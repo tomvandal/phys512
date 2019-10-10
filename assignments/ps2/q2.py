@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # load data
 time, flux, _ = np.loadtxt(
-    "/home/thomas/OneDrive/phys512/problem_sets/229614158_PDCSAP_SC6.txt",
+    "./229614158_PDCSAP_SC6.txt",
     delimiter=','
                         ).T
 # visualize light curve

@@ -62,7 +62,7 @@ def interp(spln, xnew, xknown=None, deriv_true=None):
 
 # load diode data (K, V, mV/K)
 temp, volt, dvdt = np.loadtxt(
-                "/home/thomas/OneDrive/phys512/problem_sets/lakeshore.txt").T
+                "./lakeshore.txt").T  # relative path, easier for TA's
 dvdt *= 1e-3  # adjust derivative
 
 # use scipy to setup spline that we will use later
