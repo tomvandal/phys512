@@ -145,10 +145,10 @@ def logpost(p):
 start = time.time()
 chains = mo.mh_sampler(
     logpost, pguess,
-    lambda p: mo.draw_cov(p, covmat=pcov, scale_factor=0.1),
-    nburn=None, nsteps=5000, savepath="chainsprog.dat", progsave=True)
+    lambda p: mo.draw_cov(p, covmat=pcov, scale_factor=0.06),
+    nburn=None, nsteps=5000, savepath="chainsprog_low.dat", progsave=True)
 print((time.time()-start)/60, "minutes")
-np.savetxt("chainsprog.dat", chains)
+np.savetxt("chains_low.dat", chains)
 print(chains)
 pnames = [r"$H_0$", r"$\omega_b h^2$", r"$\omega_c h^2$", r"$\tau$",
           r"$A_s$", r"$n_s$"]

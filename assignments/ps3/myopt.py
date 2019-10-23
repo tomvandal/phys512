@@ -246,7 +246,6 @@ def draw_cov(p, covmat=None, scale_factor=1.0):
                                                 "len(p) by len(p) array")
     else:
         covmat = np.eye(len(p))
-
     achol = np.linalg.cholesky(covmat)
 
     return p + scale_factor * np.dot(achol, np.random.randn(achol.shape[0]))
