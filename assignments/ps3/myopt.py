@@ -155,6 +155,7 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
 
     # burn in
     print("Starting burn-in")
+    acc_num = 0
     for i in range(nburn):
 
         # draw new sample
@@ -168,8 +169,12 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
         if acc:
             p = pnew
             lnp = lnpnew
+            acc_num += 1
+
+    print("Burn in acceptance fraction:", float(acc_num) / nburn)
 
     # final chain
+    acc_num = 0
     print("Starting production chain")
     chains = np.zeros([nsteps, len(p)])
     if savepath is not None and progsave:
@@ -187,6 +192,7 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
                 if acc:
                     p = pnew
                     lnp = lnpnew
+                    acc_num += 1
 
                 # update chain
                 datfile.write("{:s}\n".format(" ".join(str(val) for val in p)))
@@ -205,11 +211,14 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
             if acc:
                 p = pnew
                 lnp = lnpnew
+                acc_num += 1
 
             # update chain
             chains[i] = p
         if savepath is not None:
             np.savetxt(savepath, chains)
+
+    print("Acceptance fraction:", float(acc_num) / nsteps)
 
     return chains
 
