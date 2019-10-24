@@ -63,7 +63,7 @@ print()
 # mcmc tunable params
 savedir = "mcmc4_guess_newscale_10k/"
 savedir = vm.create_dir(savedir)
-scale = 0.05  # proposal distribution scale factor
+scale = 0.25  # proposal distribution scale factor
 nburn = 0
 nsteps = 100
 
