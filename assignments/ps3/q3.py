@@ -46,13 +46,13 @@ for i in range(len(popt)):
 print()
 
 # set param guess and cov matrix for proposal distribution
-pguess = np.array([65.0, 0.02, 0.1, 0.05, 2e-9, 0.96])
-# pguess = popt.copy()
+# pguess = np.array([65.0, 0.02, 0.1, 0.05, 2e-9, 0.96])
+pguess = popt.copy()
 print("Initial parameters:", pguess)
 print()
 
 # mcmc tunable params
-savedir = "mcmc3_guess_10k/"
+savedir = "mcmc3_opt_10k/"
 savedir = vm.create_dir(savedir)
 scale = 0.5  # proposal distribution scale factor
 nburn = 0
