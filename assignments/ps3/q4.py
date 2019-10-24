@@ -63,9 +63,9 @@ print()
 # mcmc tunable params
 savedir = "mcmc4_guess_newscale_10k/"
 savedir = vm.create_dir(savedir)
-scale = 0.5  # proposal distribution scale factor
+scale = 0.25  # proposal distribution scale factor
 nburn = 0
-nsteps = 100
+nsteps = 10000
 
 # run mcmc
 chains = om.mcmc(logpost_gausstau, pguess,
