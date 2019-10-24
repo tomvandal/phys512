@@ -3,6 +3,7 @@ Useful methods to find best model parameters, including optimizers, samplers,
 and differentiation.
 """
 import warnings
+import time
 
 import numpy as np
 
@@ -32,11 +33,11 @@ def grad_diff1(fun, p, pred, dp=1e-2):
     return g
 
 
-def newton_lm(fun, grad_diff, x, y, yerr, pguess, maxit=10, tol=1e-3,
-              lamb_init=0.001, dp_grad=None):
-    """Newton-LM algorithm optimizer
+def lma_opt(fun, grad_diff, x, y, yerr, pguess, maxit=10, tol=1e-3,
+            lamb_init=0.001, dp_grad=None):
+    """Levenberg-Marquardt optimizer
 
-    Use Newton-LM methods to optmize Model on a given dataset.
+    Use LM algorithm to optmize Model on a given dataset.
 
     Args:
         fun:          function to fit with positional arguments (x, parameters)
@@ -74,6 +75,8 @@ def newton_lm(fun, grad_diff, x, y, yerr, pguess, maxit=10, tol=1e-3,
 
     # newton steps
     lamb = lamb_init
+    print("Starting optimization...")
+    tstart = time.time()
     for j in range(maxit):
 
         # solve linear system
@@ -121,12 +124,38 @@ def newton_lm(fun, grad_diff, x, y, yerr, pguess, maxit=10, tol=1e-3,
     # after opt, find covariance of parameters
     invcov = grad.T * invnoise * grad
     cov = np.linalg.inv(invcov)
+    print("The optimization took {} minutes\n".format((time.time()-tstart)/60))
 
     return np.asarray(pars), np.asarray(cov)
 
 
-def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
-               progsave=False):
+def get_cov(err, p, fun, grad_diff, dp_grad=None):
+    """Calculate covariance matrix
+
+    Calculate covariance matrix of a given function's parameters for data with
+    gaussian uncorrelated error.
+
+    Args:
+        err:       Gaussian uncorrelated error
+        p:         parameters
+        fun:       function
+        grad_diff: method to calculate derivative (Args fun, p, and dp_grad)
+        dp_grad:   dp_grad
+    Returns covariance matrix
+    """
+    pred = fun(p)
+    if dp_grad is None:
+        dp = p * 1e-3
+    grad = np.matrix(grad_diff(fun, p, pred, dp=dp))
+    invnoise = np.matrix(np.diag(1/err**2))
+    cov = np.linalg.inv(grad.T*invnoise*grad)
+    cov = np.asarray(cov)
+
+    return np.asarray(cov)
+
+
+def mcmc(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
+         progsave=False):
     """MCMC MH sampler
 
     MH algorithm sampling a log-prob with a given proposal distribution
@@ -154,7 +183,9 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
         nburn = 0
 
     # burn in
-    print("Starting burn-in")
+    if nburn != 0:
+        print("Starting burn-in")
+    tstart = time.time()
     acc_num = 0
     for i in range(nburn):
 
@@ -171,7 +202,10 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
             lnp = lnpnew
             acc_num += 1
 
-    print("Burn in acceptance fraction:", float(acc_num) / nburn)
+    if nburn != 0:
+        print("Burn in acceptance fraction:", float(acc_num) / nburn)
+        print("Burn in took {} minutes".format((time.time()-tstart)/60))
+        print()
 
     # final chain
     acc_num = 0
@@ -219,6 +253,8 @@ def mh_sampler(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
             np.savetxt(savepath, chains)
 
     print("Acceptance fraction:", float(acc_num) / nsteps)
+    print("MCMC took {} minutes".format((time.time()-tstart)/60))
+    print()
 
     return chains
 
@@ -258,3 +294,11 @@ def draw_cov(p, covmat=None, scale_factor=1.0):
     achol = np.linalg.cholesky(covmat)
 
     return p + scale_factor * np.dot(achol, np.random.randn(achol.shape[0]))
+
+
+def getflat(chains):
+        """
+        Get flatchain from MCMC chain array (for corner plot, e.g.)
+        """
+        s = chains.shape
+        return np.copy(chains.reshape(s[0] * s[1], s[2]))
