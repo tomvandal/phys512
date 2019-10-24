@@ -52,7 +52,7 @@ print("Initial parameters:", pguess)
 print()
 
 # mcmc tunable params
-savedir = "mcmc/"
+savedir = "mcmc_guess_10k/"
 savedir = vm.create_dir(savedir)
 scale = 0.5  # proposal distribution scale factor
 nburn = 0
