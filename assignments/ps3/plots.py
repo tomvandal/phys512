@@ -79,7 +79,8 @@ def mcmc_chains(chains, names, savepath=None, show=True, title=None, tsize=22,
 
 def mcmc_corner(samples, labels, show_titles=True, title=None, tsize=22,
                 truths=None, ticksize=12, label_kwargs={"fontsize": 20},
-                savepath=None, show=True, title_kwargs=None, figsize=None):
+                savepath=None, show=True, title_kwargs=None, figsize=None,
+                contours=True):
 
     if len(samples.shape) == 3:  # make sure chain is flat
         samples = om.getflat(samples)
@@ -87,7 +88,7 @@ def mcmc_corner(samples, labels, show_titles=True, title=None, tsize=22,
 
     figure = corner.corner(samples, labels=labels, show_titles=show_titles,
                            truths=truths, quantiles=[0.5],
-                           label_kwargs=label_kwargs,
+                           plot_contours=contours, label_kwargs=label_kwargs,
                            title_kwargs=title_kwargs)
     if figsize is not None:
         figure.set_size_inches(figsize)

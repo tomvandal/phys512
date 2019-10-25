@@ -259,24 +259,6 @@ def mcmc(lnprob, p0, proposal, nburn=None, nsteps=1000, savepath=None,
     return chains
 
 
-def draw_normal(p, pscales=None, scale_factor=1.0):
-    """Draw samples from independent Gaussian distributions
-    Args:
-        p:            parameters at which the distribution is centered
-        pscales:      specific scale for each param
-                      (all multiplied by scale_factor)
-        scale_factor: general scale factor applied to std dev of all params.
-                      (Default is 1.0)
-    """
-    if pscales is not None:
-        assert len(pscales) == len(p), "Should have one scale per param."
-        pscales = np.asarray(pscales)
-    else:
-        pscales = np.ones(len(p))
-
-    return p + scale_factor * pscales * np.random.randn(len(p))
-
-
 def draw_cov(p, covmat=None, scale_factor=1.0):
     """Draw samples around p with a given covariance matrix
     Args:

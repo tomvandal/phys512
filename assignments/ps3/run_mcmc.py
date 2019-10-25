@@ -1,18 +1,30 @@
 """
 Sample parameter space using MCMC
 """
+import os
+
 import numpy as np
 
 from cmb_methods import get_spectrum
 import opt_methods as om
 import plots as pl
-import varia.misc as vm  # REMOVE WHEN SUBMITTING
 
 
 def loglike(p):
     # Log likelihood for get_spectrum at give p vector, with WMAP data
     fit = get_spectrum(p)
     return -0.5 * np.sum(((power-fit)/epower)**2)
+
+
+def logpost_postau(p):
+    # Log posterior prob for loglike with a positive boundary on tau
+    lp = loglike(p)  # without prior, just loglike
+
+    # positive prior on tau
+    if p[3] < 0:
+        return - np.inf  # i.e. prob is 0
+
+    return lp
 
 
 def loggauss(p, mu, sigma):
@@ -56,19 +68,18 @@ print()
 
 # set param guess and cov matrix for proposal distribution
 pguess = np.array([65.0, 0.02, 0.1, 0.05, 2e-9, 0.96])
-# pguess = popt.copy()
 print("Initial parameters:", pguess)
 print()
 
 # mcmc tunable params
-savedir = "mcmc4_guess_newscale_10k/"
-savedir = vm.create_dir(savedir)
-scale = 0.25  # proposal distribution scale factor
-nburn = 0
+savedir = "mcmc4/"
+savedir = os.makedirs("newdir")  # careful not to overwrite!!
+scale = 0.5  # proposal distribution scale factor
+nburn = 0  # default burn in (can be added later)
 nsteps = 10000
 
 # run mcmc
-chains = om.mcmc(logpost_gausstau, pguess,
+chains = om.mcmc(logpost_postau, pguess,
                  lambda p: om.draw_cov(p, covmat=pcov, scale_factor=scale),
                  nburn=nburn, nsteps=nsteps, savepath=savedir+"chains.txt",
                  progsave=True)
