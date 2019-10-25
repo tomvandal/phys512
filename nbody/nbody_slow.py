@@ -7,7 +7,7 @@ import matplotlib
 from matplotlib  import pyplot as plt
 
 class particles:
-    def __init__(self,m=1.0,npart=1000,soft=0.03,G=1.0,dt=0.1):
+    def __init__(self,m=1.0,npart=1000,soft=0.01,G=1.0,dt=0.1):
         self.opts={}
         self.opts['soft']=soft
         self.opts['n']=npart
