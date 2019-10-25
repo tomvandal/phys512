@@ -7,8 +7,8 @@ Note: [Q1](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/q1.p
 ## Modules
 The files that are not mentionned above are just simple modules used throughout the problem set:
     
-    - [cmb_methods.py](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/cmb_methdos.py): contains CAMB related stuff.
-    - [opt_methods.py](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/opt_methods.py): contains all optimization related methods (Grad, LMA, Cov, MCMC, Poposal distributions).
-    - [plots.py](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/plots.py): contains plotting functions for MCMC and for CMB.
+- [cmb_methods.py](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/cmb_methdos.py): contains CAMB related stuff.
+- [opt_methods.py](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/opt_methods.py): contains all optimization related methods (Grad, LMA, Cov, MCMC, Poposal distributions).
+- [plots.py](https://github.com/tomvandal/phys512/tree/master/assignments/ps3/plots.py): contains plotting functions for MCMC and for CMB.
 
 I used python 3.7.3, but I tried to make compatible with python 2.7 (there may still be errors in python 2.7, I haven't tried).
