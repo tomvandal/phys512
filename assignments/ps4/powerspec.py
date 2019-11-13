@@ -2,7 +2,6 @@
 Useful function to obtain and manipulate power spectrum decomposition
 """
 import numpy as np
-from scipy.fftpack import rfft
 
 
 def powerspec(y, fs=1.0, winfun=None, nfft=256, noverlap=None):
@@ -40,7 +39,9 @@ def powerspec(y, fs=1.0, winfun=None, nfft=256, noverlap=None):
         assert callable(winfun), ("Window should be a callable object taking"
                                   "one argument.")
         win = winfun(nfft)
-        normfac = 1.0 / np.sum(win)**2  # rescaling for a power spectrum
+        # rescaling for a power spectrum in Welch method
+        # (http://www.ijete.org/wp-content/uploads/2014/09/IC-97.pdf)
+        normfac = np.sum(win)**2
     else:
         win = 1.0
         normfac = 1.0
@@ -53,24 +54,17 @@ def powerspec(y, fs=1.0, winfun=None, nfft=256, noverlap=None):
     powers = np.empty(nfft // 2 + 1)  # for even number of pts
     for i, ind in enumerate(inds):
         yi = y[ind:ind+nfft]  # y for current segment
-        # yft = np.fft.rfft(yi*win, nfft)  # real FT of segment
-        yft = rfft(yi*win, nfft)
+        yft = np.fft.rfft(yi*win, nfft)
 
         # Add segment to power spectrum and average at the same time.
-        # There is twice as many points in the FT compared to power spectrum,
-        # so we sum the squares of subsequent points (::2 indexing below)
         if i == 0:
-            powers[[0, -1]] = yft[[0, -1]]**2             # handle boundaries
-            print(powers[1:-1].size, yft[1:-1:2].size, yft[2::2].size)
-            powers[1:-1] = yft[1:-1:2]**2 + yft[2::2]**2  # middle
+            powers = np.abs(yft)**2
         else:
             powers *= i / (i+1.0)  # rescale previous steps for avg
-            powers[[0, -1]] += yft[[0, -1]]**2 / (i+1.0)
-            powers[1:-1] += (yft[1:-1:2]**2 + yft[2::2]**2) / (i+1.0)
+            powers += np.abs(yft)**2 / (i+1.0)
 
     # normalize: twice as big for middle points because they result from a sum
-    powers[1:-1] *= 2*normfac
-    powers[[0, -1]] *= normfac
+    powers *= 2.0/normfac
 
     # frequencies: fs gives the spacing and nfft rescales by number of points
     # (since nfft is not the same as the size of powers)
