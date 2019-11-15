@@ -27,7 +27,7 @@ def readfile(fpath):
 
     datfile.close()
 
-    return strain, time, dt
+    return strain, time
 
 
 def readtemp(fpath):
