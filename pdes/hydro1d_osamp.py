@@ -1,7 +1,7 @@
 import numpy
 from matplotlib import pyplot as plt
 
-osamp=100
+osamp=1000
 class Fluid:
     def __init__(self,npix=200,gamma=5.0/3.0,bc_type='periodic'):
         self.rho=numpy.zeros(npix)
@@ -69,21 +69,46 @@ class Fluid:
         drho=0*self.rho
         dp=0*self.p
         drhoE=0*self.rhoE
-        for ii in range(1,self.n-1):            
-            if self.v[ii]>0:
-                drho[ii+1]+=frho[ii]
-                drho[ii]-=frho[ii]
-                dp[ii+1]+=fp[ii]
-                dp[ii]-=fp[ii]
-                drhoE[ii+1]+=fE[ii]
-                drhoE[ii]-=fE[ii]
-            if self.v[ii]<0:
-                drho[ii-1]+=frho[ii]
-                drho[ii]-=frho[ii]
-                dp[ii-1]+=fp[ii]
-                dp[ii]-=fp[ii]
-                drhoE[ii-1]+=fE[ii]
-                drhoE[ii]-=fE[ii]
+        mask=self.v>0
+        mask[0]=False
+        mask[-1]=False
+        mask_r=np.roll(mask,1)
+        #mask_l=np.roll(mask,-1)
+        drho[mask_r]+=frho[mask]
+        drho[mask]-=frho[mask]
+        dp[mask_r]+=fp[mask]
+        dp[mask]-=fp[mask]
+        drhoE[mask_r]+=fE[mask]
+        drhoE[mask]-=fE[mask]
+        mask=self.v<=0
+        mask[0]=False
+        mask[-1]=False
+
+        mask_r=np.roll(mask,-1)
+        drho[mask_r]+=frho[mask]
+        drho[mask]-=frho[mask]
+        dp[mask_r]+=fp[mask]
+        dp[mask]-=fp[mask]
+        drhoE[mask_r]+=fE[mask]
+        drhoE[mask]-=fE[mask]
+
+        
+
+        #for ii in range(1,self.n-1):            
+        #    if self.v[ii]>0:
+        #        drho[ii+1]+=frho[ii]
+        #        drho[ii]-=frho[ii]
+        #        dp[ii+1]+=fp[ii]
+        #        dp[ii]-=fp[ii]
+        #        drhoE[ii+1]+=fE[ii]
+        #        drhoE[ii]-=fE[ii]
+        #    if self.v[ii]<0:
+        #        drho[ii-1]+=frho[ii]
+        #        drho[ii]-=frho[ii]
+        #        dp[ii-1]+=fp[ii]
+        #        dp[ii]-=fp[ii]
+        #        drhoE[ii-1]+=fE[ii]
+        #        drhoE[ii]-=fE[ii]
         #Why is there a factor of 1/2 in the pressure gradient? Tutorial problem 2
         gradP=0.5*(self.P[2:]-self.P[0:-2])
         dp[1:-1]-=gradP
