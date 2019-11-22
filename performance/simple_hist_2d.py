@@ -8,7 +8,7 @@ def hist_2d(xy,grid):
         grid[ixy[i,0],ixy[i,1]]=grid[ixy[i,0],ixy[i,1]]+1
 
 npix=1000
-npt=1000000
+npt=2000000
 ndim=2
 xy=np.random.rand(npt,ndim)*(npix-1)  #-1 is just to make sure we don't go off the edge
 
