@@ -34,5 +34,5 @@ for step in range(0,450):
     plt.axis([0,n,0,1.1])
     plt.plot(x,big_rho[1:])
     plt.pause(0.005)
-    plt.draw()
+    #plt.draw()
 
