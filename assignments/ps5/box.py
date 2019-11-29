@@ -1,5 +1,6 @@
 """
-Classes for ps5. Boxes for the conductor and temperature problems.
+Class for a 2d box containing a cylinder. Some private methods useful
+for the various solvers are defined before the Box class.
 """
 import time
 import warnings
@@ -18,10 +19,11 @@ def _get_rhs(bc, mask):
         Get RHS (b) of the problem in matrix formulation Ax=b. This gives the
         contribution from the boundary conditions.
         Args:
-            bc: potential boundary conditions
-            mask: where the boundary conditions apply in theh potential matrix
+            bc   (array): potential boundary conditions
+            mask (array): where the boundary conditions apply in theh potential
+                          matrix
         Returns:
-            rhs: matrix of the BC contribution to final potential
+            rhs (array): matrix of the BC contribution to final potential
         """
         rhs = np.zeros(bc.shape)
         rhs[:, :-1] += bc[:, 1:]  # add right
@@ -36,10 +38,10 @@ def _get_rhs(bc, mask):
 def _get_laplacian(pot, mask, copy=False):
     """Get laplacian operator with finite differences.
     Args:
-        pot: potential grid
-        mask: where BCs apply
+        pot  (array): potential grid
+        mask (array): True where BCs apply
     Returns:
-        ax: laplacian opereator in matrix form
+        ax (array): laplacian opereator in matrix form
     """
     if copy:
         pot = pot.copy()
@@ -109,6 +111,8 @@ def _lowres(mat):
     is too. This method is not intended for other arrays than BC or masks.
     Args:
         mat (array): 2d array with equal even dimensions along both axes
+    Returns:
+        newmat (array): lower resolution matrix
     """
     # sanity check
     s = mat.shape
@@ -134,6 +138,8 @@ def _upres(mat):
     precise BC/mask. We still use interpolation to make convergence faster.
     Args:
         mat (array): 2d array with equal dimensions along both axes
+    Returns:
+        newmat (array): array with higher resolution
     """
     # sanity check
     s = mat.shape
@@ -161,14 +167,14 @@ class Box:
     3D cylinder since the behavior is the same everywhere along z.
 
     Args:
-        npix (int): number of pixel corresponding to the desired resolution
-                    along each dimension
-        radius (int): radius of the cylinder (in pixels)
-        cylpot (float): constant potential inside the cylinder (in volts)
-        edge_bc (str): boundary conditions at edges of the box
-                         - 'clamped': 0 everywhere
-        bumploc (float): angular location of the bump's center on the cylinder
-                         (no bump if None, default is None)
+        npix       (int): number of pixel corresponding to the desired resolution
+                          along each dimension
+        radius     (int): radius of the cylinder (in pixels)
+        cylpot   (float): constant potential inside the cylinder (in volts)
+        edge_bc    (str): boundary conditions at edges of the box
+                          - 'clamped': 0 everywhere
+        bumploc  (float): angular location of the bump's center on the cylinder
+                          (no bump if None, default is None)
         bumpfrac (float): ratio of bump radius to wire radius
                           (ignored if bumploc is None)
     """
@@ -216,6 +222,8 @@ class Box:
         else:
             self._bradius = None
 
+    # A few property to access the box parameters without being able to modify
+    # them.
     @property
     def npix(self):
         return self._npix
@@ -251,7 +259,7 @@ class Box:
                                    ' reached.')
             else:
                 msg = ('The limit of 1 bump has already been reached. No new'
-                       'bump will be added.')
+                       ' bump will be added.')
                 warnings.warn(msg, RuntimeWarning)
                 return
 
@@ -356,7 +364,12 @@ class Box:
         self._pot = all_pot[0]  # update with best (desired) res
 
     def get_rho(self):
-
+        """Charge density
+        Calculate the charge density everywhere in the box
+        Returns:
+            rho (array): charge density distribution in the box
+        """
+        # poisson equation gives density directly
         rho = _get_laplacian(self._pot, self._mask, copy=True)[1:-1, 1:-1]
 
         return rho
@@ -365,6 +378,7 @@ class Box:
         """Get Electric field
         Args:
             sparse (float): resampling frequency, all pts if None
+            theo   (float): calculate analytic E-field if true (deault: false)
         Returns:
             ex, ey: x and y Efields
         """
@@ -378,8 +392,10 @@ class Box:
         return ex, ey
 
     def get_vtheo(self):
-        """
+        """Theoretical potential
         Calculate Theoretical potential based on cylinder V and BC
+        Returns:
+            v (array): analytic potential across array
         """
         dv = self._bc[0, 0] - self._cylpot
         logr = np.log(np.sqrt(self._xx**2 + self._yy**2))
@@ -390,9 +406,15 @@ class Box:
 
         return v
 
-    def show_threepanels(self, figsize=(12, 3)):
-
-        ex, ey = self.get_efield(sparse=10)
+    def show_threepanels(self, sparse=10, figsize=(12, 3)):
+        """3 panel plot
+        3 panel plot showing V, E on one panel, their analytic equivalent on
+        on the other, and the charge density on the last one.
+        Args:
+            sparse (float): resampling spacing for E-field
+            figsize (tuple): figure size according to plt.subplots
+        """
+        ex, ey = self.get_efield(sparse=sparse)
 
         labsize = 16
         titlesize = 20
@@ -400,19 +422,20 @@ class Box:
         fig, axs = plt.subplots(1, 3, figsize=figsize)
 
         vtheo = self.get_vtheo()
-        extheo, eytheo = self.get_efield(sparse=10, theo=True)
+        extheo, eytheo = self.get_efield(sparse=sparse, theo=True)
 
         potcol = axs[0].pcolormesh(self._xx, self._yy, self.pot)
-        axs[0].quiver(self._xx[::10, ::10], self._yy[::10, ::10], ex, ey,
-                      angles='xy')
+        axs[0].quiver(self._xx[::sparse, ::sparse],
+                      self._yy[::sparse, ::sparse], ex, ey, angles='xy')
         axs[0].set_xlabel('X (pixels)', fontsize=labsize)
         axs[0].set_ylabel('Y (pixels)', fontsize=labsize)
         axs[0].set_title('Simulated Potential V', fontsize=titlesize)
         fig.colorbar(potcol, ax=axs[0])
 
         truepot = axs[1].pcolormesh(self._xx, self._yy, vtheo)
-        axs[1].quiver(self._xx[::10, ::10], self._yy[::10, ::10],
-                      extheo, eytheo, angles='xy')
+        axs[1].quiver(self._xx[::sparse, ::sparse],
+                      self._yy[::sparse, ::sparse], extheo, eytheo,
+                      angles='xy')
         axs[1].set_xlabel('X (pixels)', fontsize=labsize)
         axs[1].set_ylabel('Y (pixels)', fontsize=labsize)
         axs[1].set_title('Theoretical Potential V', fontsize=titlesize)

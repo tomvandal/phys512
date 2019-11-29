@@ -1,5 +1,6 @@
 """
-Solve heat equation in box with linear temperature
+Solve heat equation in box with linear temperature increase in time on one
+side.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,19 +11,20 @@ plt.rc('font', family='serif')
 
 
 def solve_heat(dt, dx, k, tmax, xmax, const):
-    """FTCS method for von Neumann condition
+    """Solve heat equation with FTCS method for von Neumann condition
     We have a 2d box, but we only consider one line at the center, which makes
     this a 1D problem.
     Args:
-        dt (float): time steps
-        dx (float): space steps
-        k  (float): convergence coeff
-        tmax (float): max time value to solve for
-        ymax (float): max x value of the box
+        dt    (float): time steps
+        dx    (float): space steps
+        k     (float): convergence coeff
+        tmax  (float): max time value to solve for
+        ymax  (float): max x value of the box
         const (float): constant rate defining VN condition
     Returns:
-        x: x values along the box
-        temp: temperature along the box
+        t    (array): time values
+        x    (array): x values along the box
+        temp (array): temperature along the box at each time
     """
     # convergence factor (from k)
     fact = k * dt/dx**2
@@ -50,10 +52,11 @@ def solve_heat(dt, dx, k, tmax, xmax, const):
 def plot_heat(tvals, x, temp, sparse=100, keep=False):
     """Plot of heat propagation
     Args:
-        tvals: all time values
-        x: x values in the box
-        temp: temparature at each point in space and time
+        tvals  (array): all time values
+        x      (array): x values in the box
+        temp   (array): temparature at each point in space and time
         sparse (float): resampling for time values, all pts if None
+        keep    (bool): keep all trials on one plot if true, else vary in time
     """
     labsize = 14
     legsize = 14
