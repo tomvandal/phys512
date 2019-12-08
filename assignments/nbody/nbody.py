@@ -58,15 +58,15 @@ class NBody():
                           RuntimeWarning)
             self._resol = resol + 1
 
-        # masses
+        # masses (with shape matching pos, vel)
         if np.isscalar(m):
-            self._m = m * np.ones(npart)
+            self._m = m * np.ones([npart, 1])
         else:
             m = np.asarray(m)
             m = m.flatten()
             if m.size != npart:
                 raise ValueError('m must have size npart or be scalar')
-            self._m = m.copy()
+            self._m = np.array([m.copy()]).T
         self._m = self._m.astype('float')  # ensure floats
 
         # initial position
@@ -112,9 +112,12 @@ class NBody():
         return self._pos
 
     @property
+    def resol(self):
+        return self._resol
+
+    @property
     def vel(self):
         return self._vel
-    
 
     @property
     def density(self):
@@ -155,7 +158,7 @@ class NBody():
 
         # assign densities according to interpolation scheme
         for i in range(self._npart):
-            self._density[tuple(self._indxy[i])] += self._m[i]
+            self._density[tuple(self._indxy[i])] += self._m[i, 0]
 
     def _init_green(self):
         """Compute Green's function on the grid
@@ -187,19 +190,25 @@ class NBody():
         # assign green function (evaluated on grid) to attribute
         self._green = green
 
-    def get_pot(self):
+    def get_pot(self, pad=False):
         """Compute potential energy
         Gives potential energy in each grid cell (not for each ptcl!). These
         potential values do not account for the mass
+        Args:
+            pad (bool): return with padding for clamped bc if true
         Returns:
             pot (array): array representing the potential grid
         """
         pot = np.fft.rfftn(self._green) * np.fft.rfftn(self._density)
         pot = np.fft.irfftn(pot)
 
+        # re-center potential using adjacent cells, improving stability
+        for i in range(self._ndim):
+            pot = 0.5 * (np.roll(pot, 1, axis=i) + pot)
+
         # handle non-periodic boundaries
-        if self.bc == 'clamped':
-            pot = np.pad(pot)
+        if self.bc == 'clamped' and pad:
+            pot = np.pad(pot, 1, constant_values=0)
 
         return pot
 
@@ -212,17 +221,27 @@ class NBody():
                            E.g.: to access pt (0,5) on grid, simply use
                            fgrid[0, 5].
         """
-        pot = self.get_pot()
-        fgrid = np.array(np.gradient(pot))  # get grad of pot, transposed
-        # shape = [self._ndim]
-        # shape.extend([self._resol]*self._ndim)
-        # fgrid = np.zeros(shape)
-        # for i in range(self._ndim):
-        #     fgrid[i] = -0.5 * (np.roll(pot, 1, axis=i)
-        #                        - np.roll(pot, -1, axis=i))
+        pot = self.get_pot(pad=True)  # will be padded if clamped bc
+        if self.bc == 'periodic':
+            shape = [self._ndim]
+            shape.extend([self._resol]*self._ndim)
+            fgrid = np.zeros(shape)
+            for i in range(self._ndim):
+                fgrid[i] = -0.5 * (np.roll(pot, 1, axis=i)
+                                   - np.roll(pot, -1, axis=i))
         if self.bc == 'clamped':
-            inds = (slice(1, -1),)
-            fgrid = fgrid[inds*self._ndim]
+            shape = [self._ndim]
+            shape.extend([self._resol+2]*self._ndim)
+            fgrid = np.zeros(shape)
+            for i in range(self._ndim):
+                fgrid[i] = -0.5 * (np.roll(pot, 1, axis=i)
+                                   - np.roll(pot, -1, axis=i))
+            # fgrid = np.array(np.gradient(pot))  # get grad of pot, transposed
+            inds = [slice(None)]
+            inds.extend([slice(1, -1)]*self._ndim)
+            inds = tuple(inds)
+            fgrid = fgrid[inds]
+            # USE PADDING ALL THE TIME INSTEAD OF WEIRD PC STUFF
         fgrid *= - self._density  # convert to actual force
 
         return fgrid.T
@@ -259,7 +278,7 @@ class NBody():
         # multiply by masses (densities) on the grid, and by G do get
         # proper units (if specified).
         pot_eg = np.sum(self._density * self.get_pot()) * self._G
-        kin_eg = np.sum(np.array([self._m]).T * self._vel**2)
+        kin_eg = np.sum(self._m * self._vel**2)
 
         return pot_eg + kin_eg if tot else (pot_eg, kin_eg)
 
@@ -272,15 +291,14 @@ class NBody():
         # update position
         self._pos += self._vel * self._dt
 
-        # Periodic bc: this should not matter if other bc's are set since
-        # no particle should go to boundary (for clamped bc's at least).
+        # Periodic bc: reappear on the other side
         self._pos = self._pos % self._resol  # periodic boundary
 
         # get forces for each ptcl
         forces = self.ptcl_forces()
 
         # update velocity (have to play with m shape a bit to divide each ptcl)
-        self._vel += forces * self._dt / np.array([self._m]).T  # acc*dt
+        self._vel += forces * self._dt / self._m  # acc*dt
 
         # update grid
         self._compute_density()
