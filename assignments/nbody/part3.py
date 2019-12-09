@@ -9,18 +9,18 @@ import nbody as nb
 import utils as ut
 
 # init nbody model
-res = 50
-npart = 1
-pos0 = np.array([[res / 2, res / 2]])
+res = 400
+npart = int(1e5)
+# pos0 = np.array([[res / 2, res / 2]])
 # pos0 = np.array([[res / 2, res / 2-13],
 #                  [res / 2, res / 2+13]])
-# pos0 = None
-vel0 = np.array([[1.0, 0.0]])
+pos0 = None
+# vel0 = np.array([[1.0, 0.0]])
 # vel0 = np.array([[0.1, 0.0],
 #                  [-0.1, 0.0]])
-# vel0 = 0.0
-model = nb.NBody(m=1.0, npart=npart, resol=res, soft=0.01, dt=1.0, pos0=pos0,
-                 vel0=vel0, G=1.0, ndim=2, bc='periodic')
+vel0 = 0.0
+model = nb.NBody(m=1.0/npart, npart=npart, resol=res, soft=10, dt=500, pos0=pos0,
+                 vel0=vel0, G=1.0, ndim=2, bc='clamped')
 # print(model.pos)
 # print(model.vel)
 # print(model.get_energy())
@@ -39,7 +39,7 @@ model = nb.NBody(m=1.0, npart=npart, resol=res, soft=0.01, dt=1.0, pos0=pos0,
 
 # show model
 ut.grid_animation2d(model, niter=200, show=True, savepath=None, figsize=(8, 8),
-                    intv=200, ret_fig=False, ret_ani=False, title=None,
+                    intv=50, ret_fig=False, ret_ani=False, title=None,
                     repeat=True)
 # ut.pts_animation2d(model, niter=200, show=True, savepath=None, figsize=(8, 8),
 #                    intv=200, ret_fig=False, ret_ani=False, title=None,

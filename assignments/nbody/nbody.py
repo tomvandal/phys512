@@ -43,6 +43,7 @@ class NBody():
         self._G = G
         self._dt = dt
         self._ndim = ndim
+        self._npad = 5
 
         # boundary conditions
         bc_opts = ['periodic', 'clamped']
@@ -190,59 +191,93 @@ class NBody():
         # assign green function (evaluated on grid) to attribute
         self._green = green
 
-    def get_pot(self, pad=False):
-        """Compute potential energy
-        Gives potential energy in each grid cell (not for each ptcl!). These
-        potential values do not account for the mass
-        Args:
-            pad (bool): return with padding for clamped bc if true
+    def _compute_pot(self):
+        """Compute potential
+        Gives potential in each grid cell. These potential values do not
+        account for the mass. The potential array is padded according to the
+        boundary condtion.
         Returns:
-            pot (array): array representing the potential grid
+            pot (array): array representing the potential grid, with BC padding
+                         such that each axis has size resol+2
         """
         pot = np.fft.rfftn(self._green) * np.fft.rfftn(self._density)
         pot = np.fft.irfftn(pot)
+
+        # apply BC
+        if self._bc == 'periodic':
+            pot = np.pad(pot, self._npad, mode='wrap')  # wrap each dim on itself
+        elif self._bc == 'clamped':
+            pot = np.pad(pot, self._npad, constant_values=0.0)
 
         # re-center potential using adjacent cells, improving stability
         for i in range(self._ndim):
             pot = 0.5 * (np.roll(pot, 1, axis=i) + pot)
 
-        # handle non-periodic boundaries
-        if self.bc == 'clamped' and pad:
-            pot = np.pad(pot, 1, constant_values=0)
+        return pot
+
+    def get_pot(self):
+        """Get potential
+        Gives potential in each grid cell. These potential values do not
+        account for the mass.
+        Returns:
+            pot (array): array representing the potential grid
+        """
+        pot = self._compute_pot()
+        pot = NBody._strip(pot, nlayers=self._npad)  # remove padding
 
         return pot
 
+    @staticmethod
+    def _strip(a, nlayers=1, keep=None):
+        """Strip an array with arbitrary number of dimension
+        Along each dimension, given number of layers is stripped from the input
+        arra.
+        Args:
+            a (array): array with arbitrary number of dimension.
+            nlayers (int): number of layers to strip along each dimension
+            keep (array_like): dimensions along which we keep all elements.
+                               Default is None.
+        Returns:
+            astrip (array): copy of a with nlayers removed axes
+        """
+        # process input
+        nlayers = int(nlayers)
+        a = np.array(a)
+        a = a.copy()
+        mask = np.ones(a.ndim, dtype=bool)  # dims along which we strip
+        if keep is not None:
+            if np.isscalar(keep):
+                keep = [keep]
+            keep = tuple(keep)
+            mask[keep] = 0
+
+        # indexing
+        keepind = slice(None)
+        stripind = slice(nlayers, -nlayers)
+        inds = np.empty(a.ndim, dtype=object)
+        inds[mask] = stripind
+        inds[np.invert(mask)] = keepind
+        inds = tuple(inds)
+
+        return a[inds]
+
     def grid_forces(self):
         """Compute forces on the grid
-        Gives force acting on each grid cell.
+        Gives force acting on each grid cell, with additional padding at
+        boundaries.
         Returns:
             fgrid (array): array of the same shape as the density grid with
                            three forces component for each grid cell (x,y,z).
                            E.g.: to access pt (0,5) on grid, simply use
                            fgrid[0, 5].
         """
-        pot = self.get_pot(pad=True)  # will be padded if clamped bc
-        if self.bc == 'periodic':
-            shape = [self._ndim]
-            shape.extend([self._resol]*self._ndim)
-            fgrid = np.zeros(shape)
-            for i in range(self._ndim):
-                fgrid[i] = -0.5 * (np.roll(pot, 1, axis=i)
-                                   - np.roll(pot, -1, axis=i))
-        if self.bc == 'clamped':
-            shape = [self._ndim]
-            shape.extend([self._resol+2]*self._ndim)
-            fgrid = np.zeros(shape)
-            for i in range(self._ndim):
-                fgrid[i] = -0.5 * (np.roll(pot, 1, axis=i)
-                                   - np.roll(pot, -1, axis=i))
-            # fgrid = np.array(np.gradient(pot))  # get grad of pot, transposed
-            inds = [slice(None)]
-            inds.extend([slice(1, -1)]*self._ndim)
-            inds = tuple(inds)
-            fgrid = fgrid[inds]
-            # USE PADDING ALL THE TIME INSTEAD OF WEIRD PC STUFF
-        fgrid *= - self._density  # convert to actual force
+        pot = self._compute_pot()  # pot with padding at boundaries
+
+        # differentiate to get forces
+        fgrid = np.array(np.gradient(pot))
+
+        # convert to actual force, pad density, but no ptcls allowed in padding
+        fgrid *= - np.pad(self._density, self._npad)
 
         return fgrid.T
 
@@ -256,6 +291,9 @@ class NBody():
         """
         # get force in grid cells
         fgrid = self.grid_forces()
+
+        # strip boundary padding (no ptcls there)
+        fgrid = NBody._strip(fgrid, nlayers=self._npad, keep=2)
 
         # get ptcl force with 0th order interp (NGP)
         fpos = fgrid[tuple(self._indxy[:, i] for i in range(self._ndim))]
