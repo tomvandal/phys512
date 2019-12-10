@@ -1,0 +1,10 @@
+Step 0: Total Energy is -7362.111128119981
+Step 0: Total Energy is -7362.110299377355
+Step 1: Total Energy is -7362.109728330724
+Step 2: Total Energy is -7362.108612463053
+Step 3: Total Energy is -7362.108031574526
+Step 4: Total Energy is -7362.10693368551
+Step 5: Total Energy is -7362.106525566266
+Step 6: Total Energy is -7362.105414403222
+Step 7: Total Energy is -7362.104888964802
+Step 8: Total Energy is -7362.103758786072

@@ -8,7 +8,7 @@ BC_OPTS = ['periodic', 'grounded']  # available BC options
 class NBody():
     """Particle Mesh (PM) NBody solver
 
-    Modelling gravitational N-Body problem with particle mesh method in 2D.
+    Modelling gravitational N-Body problem with particle mesh method in n-D.
     Solving for the potential with Fourier methods and flexible mass/force
     assignment/interpolation.
 
@@ -40,7 +40,8 @@ class NBody():
     """
 
     def __init__(self, m=1.0, npart=1000, ngrid=500, soft=0.1, dt=0.1,
-                 pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=False):
+                 pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=False,
+                 ndim=2):
         # Constant parameters.
         # Number of ptcls
         self._npart = int(npart)
@@ -74,9 +75,10 @@ class NBody():
             self._cosmo = cosmo
         else:
             raise TypeError('cosmo must be boolean.')
+        self._ndim = int(ndim)
 
-        # Check and init ptcls position and velocity, both in (npart, 2) array.
-        # Results stored in self._pos and self._vel
+        # Check and init ptcls position and velocity, both in (npart, ndim)
+        # array. Results stored in self._pos and self._vel
         self._init_pos(pos0)
         self._init_vel(vel0)
 
@@ -102,6 +104,10 @@ class NBody():
     @property
     def ngrid(self):
         return self._ngrid
+
+    @property
+    def ndim(self):
+        return self._ndim
 
     @property
     def soft(self):
@@ -151,7 +157,7 @@ class NBody():
                     raise ValueError('m must have size npart or be scalar')
                 self._m = np.array([m.copy()]).T
         # Using scale-invariant power spectrum to scale mass distribution. In
-        # this case, the grid points will be used to obtain 2d spacial
+        # this case, the grid points will be used to obtain nd spacial
         # frequencies (k-vector), and this will be used to obtain a power
         # spectrum. We will then re-scale mass distribution and assign scaled
         # masses to each particle.
@@ -171,8 +177,9 @@ class NBody():
             davg = np.mean(self.density)
 
             # Fourier space and power spectrum.
-            kxy = np.fft.rfftfreq(self.ngrid) * 2*np.pi
-            kmesh = np.array(np.meshgrid(kxy, kxy))
+            knd = np.fft.rfftfreq(self.ngrid) * 2*np.pi
+            knd = np.repeat([knd], self.ndim, axis=0)
+            kmesh = np.array(np.meshgrid(*knd))  # mesh in all dims
             ksqr = np.sum(kmesh**2, axis=0)  # k2 on grid
             soft = 2*np.pi/self.soft
             ksqr[ksqr < soft**2] = soft**2
@@ -186,14 +193,14 @@ class NBody():
             ft = amps * np.exp(1j*phases)
 
             # IFT for fluctuations, then derive ptcl masses
-            fluct = np.fft.irfft2(ft, s=self.density.shape)
+            fluct = np.fft.irfftn(ft, s=self.density.shape)
             density = davg * fluct + davg  # new density
             ncell = self.density / mavg  # ptcls in each cell
             mcell = density.copy()
             mcell[ncell > 0] /= ncell[ncell > 0]  # mass for ptcls in each cell
 
             # Assign back to mass.
-            m = mcell[self._meshpts[:, 0], self._meshpts[:, 1]]
+            m = mcell[self._meshinds]
 
             self._m = np.array([m.copy()]).T
 
@@ -205,14 +212,15 @@ class NBody():
         if pos0 is not None:
             # Sanity checks.
             pos = np.asarray(pos0, dtype=float)
-            if pos.shape != (self.npart, 2):
-                raise ValueError('pos0 must have shape (npart, 2)')
+            if pos.shape != (self.npart, self.ndim):
+                raise ValueError('pos0 must have shape (npart, ndim)')
             if pos.max() >= xmax or pos.min() < xmin:
                 raise ValueError('positions in all dimension must be within'
-                                 ' [0, ngrid)')
+                                 ' [0, ngrid) for periodic and [1,ngrid-1)'
+                                 ' otherwise.')
         else:
             pos = xmax - xmin
-            pos *= np.random.random_sample([self.npart, 2])
+            pos *= np.random.random_sample([self.npart, self.ndim])
         self._pos = pos.copy()
 
     def _init_vel(self, vel0):
@@ -220,46 +228,46 @@ class NBody():
             vel0 = 0.0
         if np.isscalar(vel0):
             vel = float(vel0)
-            vel *= np.random.standard_normal([self.npart, 2])
+            vel *= np.random.standard_normal([self.npart, self.ndim])
         # Sanity checks.
         else:
             vel = np.asarray(vel0, dtype=float)
-            if vel.shape != (self.npart, 2):
-                raise ValueError('vel0 must have shape (npart, 2)')
+            if vel.shape != (self.npart, self.ndim):
+                raise ValueError('vel0 must have shape (npart, ndim)')
         self._vel = vel.copy()
 
     def _compute_density(self):
-        # Initialize density mesh grid. The index of each cell along a
-        # dimension gives the position along this dimension.
-        density = np.zeros([self.ngrid, self.ngrid], dtype=float)
-
         # Get mesh points for each ptcl. Take modulo to assign xi=L to xi=0,
         # such that mesh points can be integers in range [0, L-1].
         self._meshpts = np.rint(self.pos).astype('int') % self.ngrid
+        # for quick access in grid-like arrays
+        self._meshinds = tuple(self._meshpts[:, i] for i in range(self.ndim))
 
         # For each particle, assign density (mass bc unitary cells) to mesh
         # point.
         # NGP assigment scheme
-        for i in range(self.npart):
-            # Note: m[i] is an array but '+=' casts to float.
-            density[tuple(self._meshpts[i])] += self.m[i]
-        self._density = density
+        # Use ndim histogram to save some time (no loop)
+        edges = np.linspace(0, self.ngrid-1, num=self.ngrid+1)
+        edges = np.repeat([edges], self.ndim, axis=0)
+        hist = np.histogramdd(self._meshpts, bins=edges,
+                              weights=self.m.flatten())
+        self._density = hist[0]
 
     def _init_green(self):
-        # Compute Green's function on mesh grid.
-        greensize = self.ngrid
+        # Compute Green's function in one corner of mesh grid.
+        greensize = self.ngrid // 2
         meshrange = np.arange(greensize, dtype=float)
-        mesh = np.array(np.meshgrid(meshrange, meshrange))
+        meshrange = np.repeat([meshrange], self.ndim, axis=0)
+        mesh = np.array(np.meshgrid(*meshrange))
         rsqr = np.sum(mesh**2, axis=0)
         rsqr[rsqr < self.soft**2] = self.soft**2
         rsqr += self.soft**2
         r = np.sqrt(rsqr)
         green = 1 / (4*np.pi*r)
 
-        # Flip to get same behaviour in each corner (for periodicity).
-        half = greensize // 2
-        green[half:, :half] = np.flip(green[:half, :half], axis=0)
-        green[:, half:] = np.flip(green[:, :half], axis=1)
+        # flip along each dimension
+        for i in range(self.ndim):
+            green = np.append(green, np.flip(green, axis=i), axis=i)
 
         self._green = green
 
@@ -271,18 +279,19 @@ class NBody():
             pot (array): potential at every mesh point.
         """
         # Perform convolution
-        pot = np.fft.rfft2(self._green) * np.fft.rfft2(self.density)
-        pot = np.fft.irfft2(pot)
+        pot = np.fft.rfftn(self._green) * np.fft.rfftn(self.density)
+        pot = np.fft.irfftn(pot)
 
         # Because of our periodic Green's function definition used in the FFT,
         # potential is not symmetric wrt ptcl positions, so we need to shift
         # and average to center it back on ptcls.
-        for i in range(2):
+        for i in range(self.ndim):
             pot = 0.5 * (np.roll(pot, 1, axis=i) + pot)
 
         # enforce BCs
         if self.bc == 'grounded':
-            pot = np.pad(pot[1:-1, 1:-1], 1)
+            pad = tuple((slice(1, -1),)) * self.ndim
+            pot = np.pad(pot[pad], 1)
 
         return pot
 
@@ -292,16 +301,18 @@ class NBody():
         potential grid.
         Returns:
             fmesh (array): forces at each grid point. Array of shape
-            (2, ngrid, ngrid) where first axis 0 is the x and y components.
+            (ndim, (ngrid)*ndim) where first axis 0 is the x and y components.
         """
         # Init force array.
-        fmesh = np.zeros([2, self.ngrid, self.ngrid], dtype=float)
+        shape = [self.ndim]
+        shape.extend([self.ngrid]*self.ndim)
+        fmesh = np.zeros(shape, dtype=float)
 
         # Get pot.
         pot = self.get_pot()
 
         # periodic gradient in each direction
-        for i in range(2):
+        for i in range(self.ndim):
             fmesh[i] = 0.5*(np.roll(pot, 1, axis=i) - np.roll(pot, -1, axis=i))
 
         # Times density and -1 to get actual forces
@@ -317,9 +328,6 @@ class NBody():
             fpart (array): forces on particle along each axis. Array has shape
                            (npart, 2).
         """
-        # Init fpart array
-        fpart = np.zeros([self.npart, 2])
-
         # Get mesh forces and transpose such that callig fmesh[i,j] will give
         # x and y components for mesh cell (i,j).
         fmesh = np.moveaxis(self.get_fmesh(), 0, -1)
@@ -327,9 +335,7 @@ class NBody():
         # Interpolate for each praticle using same scheme as in mass
         # assignment.
         # NGP interpolation.
-        for i in range(self.npart):
-            fpart[i] = fmesh[tuple(self._meshpts[i])]
-        # fpart = fmesh[tuple(self._meshpts[:, i] for i in range(2))]
+        fpart = fmesh[self._meshinds]
 
         return fpart
 

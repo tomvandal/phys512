@@ -21,7 +21,7 @@ logfile = './energy3.txt'
 
 # NBody model object with parameters set above.
 model = nb.NBody(m=m, npart=npart, ngrid=ngrid, soft=soft, dt=dt, pos0=pos0,
-                 vel0=vel0, G=1.0, bc='periodic')
+                 vel0=vel0, G=1.0, bc='periodic', ndim=3)
 
 # import matplotlib.pyplot as plt
 # plt.imshow(model.get_pot())
@@ -34,6 +34,10 @@ title = (r'2$^{{{}}}$ randomly scattered particles for $dt={}$ ({} frames)'
                   dt,
                   niter)
 
-ut.grid_animation2d(model, niter=niter, show=show, savepath=fpath,
+# ut.grid_animation2d(model, niter=niter, show=show, savepath=fpath,
+#                     figsize=None, intv=50, nsteps=1, title=title, repeat=False,
+#                     marker='r*', style='grid', logfile=logfile)
+
+ut.density3d(model, niter=niter, show=show, savepath=fpath,
                     figsize=None, intv=50, nsteps=1, title=title, repeat=False,
                     marker='r*', style='grid', logfile=logfile)

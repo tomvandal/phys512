@@ -18,9 +18,9 @@ vfact = 0.1
 vel0 *= vfact
 soft = 0.1
 dt = 5.0
-fpath = './part2.gif'
+fpath = None  # './part2.gif'
 logfile = './energy2.txt'
-show = False
+show = True
 m = 5.0
 
 # NBody model object with parameters set above.
