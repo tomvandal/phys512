@@ -19,6 +19,7 @@ vel0 *= vfact
 soft = 0.1
 dt = 5.0
 fpath = './part2.gif'
+logfile = './energy2.txt'
 show = False
 m = 5.0
 
@@ -31,7 +32,7 @@ model = nb.NBody(m=5.0, npart=npart, ngrid=ngrid, soft=soft, dt=dt, pos0=pos0,
 # plt.show()
 
 # Animation (.gif file)
-niter = 100
+niter = 200
 title = (r'Orbiting bodies with $v_i={{{}}}$, $m={}$ for $dt={}$ ({} frames)'
          ).format(vfact,
                   m,
@@ -39,6 +40,5 @@ title = (r'Orbiting bodies with $v_i={{{}}}$, $m={}$ for $dt={}$ ({} frames)'
                   niter)
 
 ut.grid_animation2d(model, niter=niter, show=show, savepath=fpath,
-                    figsize=None, intv=50, ret_fig=False, ret_ani=False,
-                    title=title, repeat=False, marker='r*', style='pts',
-                    nsteps=1)
+                    figsize=None, intv=50, title=title, repeat=False,
+                    marker='r*', style='pts', nsteps=1, logfile=logfile)

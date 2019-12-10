@@ -40,7 +40,7 @@ class NBody():
     """
 
     def __init__(self, m=1.0, npart=1000, ngrid=500, soft=0.1, dt=0.1,
-                 pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=True):
+                 pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=False):
         # Constant parameters.
         # Number of ptcls
         self._npart = int(npart)
@@ -174,7 +174,7 @@ class NBody():
             kxy = np.fft.rfftfreq(self.ngrid) * 2*np.pi
             kmesh = np.array(np.meshgrid(kxy, kxy))
             ksqr = np.sum(kmesh**2, axis=0)  # k2 on grid
-            soft = self.soft
+            soft = 2*np.pi/self.soft
             ksqr[ksqr < soft**2] = soft**2
             ksqr += soft**2
             k = np.sqrt(ksqr)
@@ -340,7 +340,7 @@ class NBody():
         """
         # compute kin and pot as in class
         kin = np.sum(self.m * self.vel**2)
-        pot = -0.5*np.sum(np.sum(self.get_pot()) * self.density)
+        pot = -0.5*np.sum(np.sum(self.get_pot()) * self.density) * self.G
 
         return kin + pot
 

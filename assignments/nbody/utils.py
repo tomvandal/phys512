@@ -71,10 +71,9 @@ def grid_animation2d(model, niter=50, show=True, savepath=None,
     if title is not None:
         ax.set_title(title, fontsize=titlesize)
     if style == 'grid':
-        plot = ax.imshow(model.density.T, norm=norm)
+        plot = ax.imshow(model.density.T, norm=norm, cmap=plt.get_cmap(cmap))
     elif style == 'pts':
-        plot, = ax.plot(model.pos[:, 0], model.pos[:, 1], marker,
-                        cmap=plt.get_cmap(cmap))
+        plot, = ax.plot(model.pos[:, 0], model.pos[:, 1], marker)
     ax.set_xlim([0, model.ngrid])
     ax.set_ylim([0, model.ngrid])
     plt.tight_layout()
