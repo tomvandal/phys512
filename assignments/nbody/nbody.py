@@ -7,7 +7,7 @@ class NBody():
     """Particle Mesh (PM) NBody solver
 
     Modelling gravitational N-Body problem with particle mesh method in 2D.
-    Solving for the potential with Fourier methods and flexible mass/force 
+    Solving for the potential with Fourier methods and flexible mass/force
     assignment/interpolation.
 
     Args:
@@ -169,7 +169,7 @@ class NBody():
         meshrange = np.arange(greensize, dtype=float)
         mesh = np.array(np.meshgrid(meshrange, meshrange))
         rsqr = np.sum(mesh**2, axis=0)
-        rsqr[rsqr<self.soft**2] = self.soft**2
+        rsqr[rsqr < self.soft**2] = self.soft**2
         rsqr += self.soft**2
         r = np.sqrt(rsqr)
         green = 1 / (4*np.pi*r)
