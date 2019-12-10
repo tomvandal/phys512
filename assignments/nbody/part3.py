@@ -9,8 +9,8 @@ import nbody as nb
 import utils as ut
 
 # Setting up two objects in orbit around center point.
-npart = int(1e5)
-ngrid = 400
+npart = 2**17
+ngrid = 2**9
 pos0 = None
 vel0 = 0.0
 soft = 1

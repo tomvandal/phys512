@@ -8,7 +8,7 @@ import utils as ut
 
 # Setting up the model.
 npart = 1
-ngrid = 50
+ngrid = 2**6
 pos0 = np.array([[ngrid/2, ngrid/2]])  # works anywhere, nicer plot centered
 vel0 = 0.0                             # motionless ptcl
 vel0 = np.array([[10, 0]])  # test for fun

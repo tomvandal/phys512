@@ -9,7 +9,7 @@ import utils as ut
 
 # Setting up two objects in orbit around center point.
 npart = 2
-ngrid = 400
+ngrid = 2**9
 pos0 = np.array([[ngrid/2, ngrid/2+10],
                  [ngrid/2, ngrid/2-10]])
 vel0 = np.array([[1, 0],    # orbit: opposite velocities
