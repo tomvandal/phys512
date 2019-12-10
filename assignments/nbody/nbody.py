@@ -40,7 +40,7 @@ class NBody():
     """
 
     def __init__(self, m=1.0, npart=1000, ngrid=500, soft=0.1, dt=0.1,
-                 pos0=None, vel0=None, G=1.0, bc='periodic'):
+                 pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=True):
         # Constant parameters.
         # Number of ptcls
         self._npart = int(npart)
@@ -70,16 +70,20 @@ class NBody():
         if bc not in BC_OPTS:
             raise ValueError('bc must be one of {}'.format(BC_OPTS))
         self._bc = bc
-
-        # Check and init mass in an (npart, 1) array. The shape is to
-        # faciliate array operations with pos and vel.
-        # Result stored in self._m
-        self._init_mass(m)
+        if isinstance(cosmo, bool):
+            self._cosmo = cosmo
+        else:
+            raise TypeError('cosmo must be boolean.')
 
         # Check and init ptcls position and velocity, both in (npart, 2) array.
         # Results stored in self._pos and self._vel
         self._init_pos(pos0)
         self._init_vel(vel0)
+
+        # Check and init mass in an (npart, 1) array. The shape is to
+        # faciliate array operations with pos and vel.
+        # Result stored in self._m
+        self._init_mass(m)
 
         # Initialize density (same call as all other density computations).
         # Result stored in self._density. Also assigns self._meshpts with same
@@ -131,14 +135,66 @@ class NBody():
     def density(self):
         return self._density
 
+    @property
+    def cosmo(self):
+        return self._cosmo
+
     def _init_mass(self, m):
-        if np.isscalar(m):
-            self._m = m * np.ones([self.npart, 1], dtype=float)
+        if not self.cosmo:
+            # Sanity check and simple array manipulation.
+            if np.isscalar(m):
+                self._m = m * np.ones([self.npart, 1], dtype=float)
+            else:
+                m = np.asarray(m, dtype=float)
+                m = m.flatten()
+                if m.size != self.npart:
+                    raise ValueError('m must have size npart or be scalar')
+                self._m = np.array([m.copy()]).T
+        # Using scale-invariant power spectrum to scale mass distribution. In
+        # this case, the grid points will be used to obtain 2d spacial
+        # frequencies (k-vector), and this will be used to obtain a power
+        # spectrum. We will then re-scale mass distribution and assign scaled
+        # masses to each particle.
+        # (https://cds.cern.ch/record/583256/files/0209590.pdf)
         else:
-            m = np.asarray(m, dtype=float)
-            m = m.flatten()
-            if m.size != self.npart:
-                raise ValueError('m must have size npart or be scalar')
+            # First, need to uniformize masses for all ptcls
+            if not np.isscalar(m):
+                msg = ('m must be scalar when cosmo is True. Assigning '
+                       'm to mean of input array')
+                warnings.warn(msg, RuntimeWarning)
+                m = float(np.mean(m))
+            self._m = m * np.ones([self.npart]).T
+
+            # Compute density grid
+            self._compute_density()
+            mavg = np.mean(self._m)
+            davg = np.mean(self.density)
+
+            # Fourier space and power spectrum.
+            kxy = np.fft.rfftfreq(self.ngrid) * 2*np.pi
+            kmesh = np.array(np.meshgrid(kxy, kxy))
+            ksqr = np.sum(kmesh**2, axis=0)  # k2 on grid
+            soft = self.soft
+            ksqr[ksqr < soft**2] = soft**2
+            ksqr += soft**2
+            k = np.sqrt(ksqr)
+            powerspec = 1.0 / k**3
+
+            # Draw params for each fluctuation mode (each k), and construct FT.
+            amps = np.random.rayleigh(scale=np.sqrt(powerspec))
+            phases = 2*np.pi*np.random.random_sample(amps.shape)
+            ft = amps * np.exp(1j*phases)
+
+            # IFT for fluctuations, then derive ptcl masses
+            fluct = np.fft.irfft2(ft, s=self.density.shape)
+            density = davg * fluct + davg  # new density
+            ncell = self.density / mavg  # ptcls in each cell
+            mcell = density.copy()
+            mcell[ncell > 0] /= ncell[ncell > 0]  # mass for ptcls in each cell
+
+            # Assign back to mass.
+            m = mcell[self._meshpts[:, 0], self._meshpts[:, 1]]
+
             self._m = np.array([m.copy()]).T
 
     def _init_pos(self, pos0):
@@ -225,7 +281,8 @@ class NBody():
             pot = 0.5 * (np.roll(pot, 1, axis=i) + pot)
 
         # enforce BCs
-        pot = np.pad(pot[1:-1, 1:-1], 1)
+        if self.bc == 'grounded':
+            pot = np.pad(pot[1:-1, 1:-1], 1)
 
         return pot
 

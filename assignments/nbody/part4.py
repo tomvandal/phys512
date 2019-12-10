@@ -3,6 +3,7 @@ Simulating periodic BC universe with scale-invariant power spectrum s.t. mass
 fluctuations are proportional to k^(-3).
 """
 import numpy as np
+from matplotlib.colors import LogNorm
 
 import nbody as nb
 import utils as ut
@@ -20,7 +21,7 @@ m = 1.0/npart
 
 # NBody model object with parameters set above.
 model = nb.NBody(m=m, npart=npart, ngrid=ngrid, soft=soft, dt=dt, pos0=pos0,
-                 vel0=vel0, G=1.0, bc='grounded')
+                 vel0=vel0, G=1.0, bc='periodic', cosmo=True)
 
 # import matplotlib.pyplot as plt
 # plt.imshow(model.get_pot())
@@ -36,4 +37,4 @@ title = (r'{} randomly scattered particles for $dt={}$ ({} frames)'
 ut.grid_animation2d(model, niter=niter, show=show, savepath=fpath,
                     figsize=None, intv=50, ret_fig=False, ret_ani=False,
                     nsteps=1, title=title, repeat=False, marker='r*',
-                    style='grid')
+                    style='grid', norm=LogNorm(), cmap='inferno')

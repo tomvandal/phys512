@@ -32,7 +32,7 @@ def evoframe(frames, model, plot, type, nsteps, marker):
 def grid_animation2d(model, niter=50, show=True, savepath=None,
                      figsize=(8, 10), intv=200, ret_fig=False, ret_ani=False,
                      title=None, repeat=False, nsteps=1, style='grid',
-                     marker='o'):
+                     marker='o', norm=None, cmap=None):
     """Animation of 2d nbody model
     Creates an animation of a 2d nbody model with one evolution timestep per
     frame.
@@ -62,9 +62,10 @@ def grid_animation2d(model, niter=50, show=True, savepath=None,
     if title is not None:
         ax.set_title(title, fontsize=titlesize)
     if style == 'grid':
-        plot = ax.imshow(model.density.T)
+        plot = ax.imshow(model.density.T, norm=norm)
     elif style == 'pts':
-        plot, = ax.plot(model.pos[:, 0], model.pos[:, 1], marker)
+        plot, = ax.plot(model.pos[:, 0], model.pos[:, 1], marker,
+                        cmap=plt.get_cmap(cmap))
     ax.set_xlim([0, model.ngrid])
     ax.set_ylim([0, model.ngrid])
     plt.tight_layout()
