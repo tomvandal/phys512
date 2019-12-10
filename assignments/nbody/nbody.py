@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 
+BC_OPTS = ['periodic', 'grounded']  # available BC options
+
 
 class NBody():
     """Particle Mesh (PM) NBody solver
@@ -26,32 +28,48 @@ class NBody():
                                If float, input times normal random number.
                                If None, automatically set to 0.
         G (float): gravitational constant
+        bc (str): Keyword specifying how to deal with boundary conditions.
+                  Options are:
+                    - None: do nothing when a particle reaches boundaries
+                            (default). NOT RECOMMENDED.
+                    - 'periodic': periodic boundary condtions. The particles
+                                  reappear on the other side of the space.
+                    - 'grounded': potential is set to 0 around the boundary.
     Returns:
         nbody (NBody): NBody solver with specified conditions.
     """
 
     def __init__(self, m=1.0, npart=1000, ngrid=500, soft=0.1, dt=0.1,
-                 pos0=None, vel0=None, G=1.0):
+                 pos0=None, vel0=None, G=1.0, bc='periodic'):
         # Constant parameters.
+        # Number of ptcls
         self._npart = int(npart)
+        # Grid pts
         if ngrid % 2 == 0:
             self._ngrid = int(ngrid)
         else:
             warnings.warn('Arg. ngrid must be even. Adding 1 to input',
                           RuntimeWarning)
             self._ngrid = int(ngrid) + 1
+        # Softening constant.
         if np.isscalar(soft):
             self._soft = soft
         else:
             raise TypeError('soft must be a scalar value')
+        # Time steps.
         if np.isscalar(dt):
             self._dt = dt
         else:
             raise TypeError('dt must be a scalar value')
+        # Grav. constant
         if np.isscalar(G):
             self._G = G
         else:
             raise TypeError('G must be a scalar value')
+        # BCs
+        if bc not in BC_OPTS:
+            raise ValueError('bc must be one of {}'.format(BC_OPTS))
+        self._bc = bc
 
         # Check and init mass in an (npart, 1) array. The shape is to
         # faciliate array operations with pos and vel.
@@ -94,6 +112,10 @@ class NBody():
         return self._G
 
     @property
+    def bc(self):
+        return self._bc
+
+    @property
     def m(self):
         return self._m
 
@@ -120,16 +142,20 @@ class NBody():
             self._m = np.array([m.copy()]).T
 
     def _init_pos(self, pos0):
+        if self.bc == 'periodic':
+            xmin, xmax = 0, self.ngrid
+        else:
+            xmin, xmax = 1, self.ngrid - 1
         if pos0 is not None:
             # Sanity checks.
             pos = np.asarray(pos0, dtype=float)
             if pos.shape != (self.npart, 2):
                 raise ValueError('pos0 must have shape (npart, 2)')
-            if pos.max() >= self.ngrid or pos.min() < 0.0:
+            if pos.max() >= xmax or pos.min() < xmin:
                 raise ValueError('positions in all dimension must be within'
                                  ' [0, ngrid)')
         else:
-            pos = self.ngrid
+            pos = xmax - xmin
             pos *= np.random.random_sample([self.npart, 2])
         self._pos = pos.copy()
 
@@ -197,6 +223,9 @@ class NBody():
         # and average to center it back on ptcls.
         for i in range(2):
             pot = 0.5 * (np.roll(pot, 1, axis=i) + pot)
+
+        # enforce BCs
+        pot = np.pad(pot[1:-1, 1:-1], 1)
 
         return pot
 

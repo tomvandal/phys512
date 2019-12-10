@@ -21,7 +21,7 @@ m = 1.0/npart
 
 # NBody model object with parameters set above.
 model = nb.NBody(m=m, npart=npart, ngrid=ngrid, soft=soft, dt=dt, pos0=pos0,
-                 vel0=vel0, G=1.0)
+                 vel0=vel0, G=1.0, bc='grounded')
 
 # import matplotlib.pyplot as plt
 # plt.imshow(model.get_pot())
