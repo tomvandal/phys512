@@ -305,7 +305,7 @@ class NBody():
             fmesh[i] = 0.5*(np.roll(pot, 1, axis=i) - np.roll(pot, -1, axis=i))
 
         # Times density and -1 to get actual forces
-        fmesh *= - self.density
+        fmesh *= - self.density * self.G
 
         return fmesh
 
@@ -338,8 +338,9 @@ class NBody():
         Kinetic energy is calculated using ptcl velocities and masses.
         Potential energy is obtained with get_pot(), summing over all cells
         """
+        # compute kin and pot as in class
         kin = np.sum(self.m * self.vel**2)
-        pot = 0.5*np.sum(self.density * self.get_pot())
+        pot = -0.5*np.sum(np.sum(self.get_pot()) * self.density)
 
         return kin + pot
 
@@ -355,7 +356,6 @@ class NBody():
         for i in range(nsteps):
             # Get force for each particle
             forces = self.get_fpart()
-            print(forces)
 
             # update velocity
             self._vel += forces * self.dt / self._m
