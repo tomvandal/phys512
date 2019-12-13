@@ -13,8 +13,8 @@ class NBody():
     assignment/interpolation.
 
     Args:
-        m    (array or float): Mass of the particles. Same mass for all particles
-                               if scalar, one mass per ptcl if array.
+        m    (array or float): Mass of the particles. Same mass for all
+                               particles if scalar, one mass per ptcl if array.
         npart           (int): number of particles
         ngrid           (int): number of grid (mesh) pts/cells
         soft          (float): softening constant applied to distance in
@@ -42,14 +42,9 @@ class NBody():
     """
 
     def __init__(self, m=1.0, npart=1000, ngrid=500, soft=0.1, dt=0.1,
-<<<<<<< HEAD
                  pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=False,
                  ndim=2):
         # Constant parameters/attributes
-=======
-                 pos0=None, vel0=None, G=1.0, bc='periodic', cosmo=True):
-        # Constant parameters.
->>>>>>> parent of 0f23b3a... first energy results
         # Number of ptcls
         self._npart = int(npart)
         # Grid pts
