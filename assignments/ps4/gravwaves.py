@@ -128,7 +128,7 @@ def find_gw(events, eventname, datadir):
     ax[1].set_ylabel(r'SNR', fontsize=labelsize)
     ax[1].legend(loc=1, fontsize=legsize)
     ax[2].plot(time-toff, snr_tot, linewidth=0.5, color='g',
-               label='L1 SNR')
+               label='Combined SNR')
     ax[2].set_ylabel(r'SNR', fontsize=labelsize)
     ax[2].set_xlabel(r'GPS Time-{} $\times 10^{{9}}$ s'.format(toff/1e9),
                      fontsize=labelsize)
