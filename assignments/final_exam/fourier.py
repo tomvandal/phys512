@@ -5,7 +5,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 from scipy.optimize import curve_fit
 
-import functions as fun
+from . import functions as fun
 
 
 def powerspec(y, window=None, smooth_sig=None):

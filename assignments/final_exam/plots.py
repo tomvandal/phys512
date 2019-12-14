@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import corner
 
-import utils as ut
+from . import utils as ut
 
 
 # matplotlib settings (looks nicer)

@@ -16,8 +16,8 @@ plt.rc('font', family='serif')
 
 def _get_rhs(bc, mask):
         """RHS of the matrix formulation
-        Get RHS (b) of the problem in matrix formulation Ax=b. This gives the
-        contribution from the boundary conditions.
+        Get RHS (b) of the advection problem in matrix formulation Ax=b. This
+        gives the contribution from the boundary conditions.
         Args:
             bc   (array): potential boundary conditions
             mask (array): where the boundary conditions apply in theh potential

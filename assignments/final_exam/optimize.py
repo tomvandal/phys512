@@ -6,7 +6,7 @@ import warnings
 
 import numpy as np
 
-import utils as ut
+from . import utils as ut
 
 
 def _chebmat(x, order):

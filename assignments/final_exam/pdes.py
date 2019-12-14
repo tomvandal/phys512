@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 
-import utils as ut
+from . import utils as ut
 
 # nice plots
 plt.rc('text', usetex=True)
