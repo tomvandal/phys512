@@ -2,7 +2,7 @@
 
 ## Commented Results and Analysis
 **[A notebook](https://github.com/tomvandal/phys512/tree/master/assignments/nbody/nbody.ipynb) contains results and discussion for all parts, as well as an overview of the code.**
-Each part also has a corresponding ".py" file in which the problem is set up for a specific part. All results are shown as animations and placed in the ["gifs" folder](https://github.com/tomvandal/phys512/tree/master/assignments/nbody/gifs). The energy data for each run is in a text file, in the ["energy" folder](https://github.com/tomvandal/phys512/tree/master/assignments/nbody/energy). Both animatinos and energy data are also presented in the notebook.
+The notebook may take some time to load, but all what is presented there is also saved in .gif and .txt files. Each part also has a corresponding ".py" file in which the problem is set up for a specific part. All results are shown as animations and placed in the ["gifs" folder](https://github.com/tomvandal/phys512/tree/master/assignments/nbody/gifs). The energy data for each run is in a text file, in the ["energy" folder](https://github.com/tomvandal/phys512/tree/master/assignments/nbody/energy). Both animatinos and energy data are also presented in the notebook.
 
 ## Modules
 The NBody object and other utility functions are defined in separate files:
