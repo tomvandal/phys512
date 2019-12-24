@@ -115,6 +115,11 @@ def find_gw(events, eventname, datadir):
     snr_L1 = ut.get_snr(mf_L1, templ_L1, powers_L1, window=window)
     snr_tot = np.sqrt(snr_H1**2 + snr_L1**2)
 
+    # print SNR max
+    print("Max SNR H1: {:.4f}".format(np.max(snr_H1)))
+    print("Max SNR L1: {:.4f}".format(np.max(snr_L1)))
+    print("Max SNR (total): {:.4f}".format(np.max(snr_tot)))
+
     # show SNR
     fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(8, 9))
     ax[0].plot(time-toff, snr_H1, linewidth=0.5, color='b',
@@ -143,6 +148,11 @@ def find_gw(events, eventname, datadir):
     esnr_H1 = ut.expect_snr(templ_H1, powers_H1, window=window)
     esnr_L1 = ut.expect_snr(templ_L1, powers_L1, window=window)
     esnr_tot = np.sqrt(esnr_H1**2 + esnr_L1**2)
+
+    # print SNR max
+    print("Max SNR H1: {:.4f}".format(np.max(esnr_H1)))
+    print("Max SNR L1: {:.4f}".format(np.max(esnr_L1)))
+    print("Max SNR (total): {:.4f}".format(np.max(esnr_tot)))
 
     # show SNR
     fig, ax = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(8, 9))

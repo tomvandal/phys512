@@ -131,7 +131,7 @@ def _lowres(mat):
     return newmat
 
 
-def _upres(mat):
+def _upres_interp(mat):
     """Increase matrix resolution
     Increase the resolution of an array by a factor of 2. This will only be
     used to initialize potential on a grid, so we don't need to care about
@@ -155,6 +155,27 @@ def _upres(mat):
     ipts = np.array([xx.ravel(), yy.ravel()]).T
     newmat = griddata(pts, mat.ravel(), ipts, method='cubic')
     newmat = newmat.reshape(2*n, 2*n)
+
+    return newmat
+
+
+def _upres(mat):
+    """Increase matrix resolution
+    Args:
+        mat (array): 2d array with equal dimensions along both axes
+    Returns:
+        newmat (array): array with higher resolution
+    """
+    # sanity check
+    s = mat.shape
+    assert np.unique(s).size == 1, 'mat must have equal dimensions'
+
+    n = s[0]
+    newmat = np.zeros([n*2, n*2], dtype=mat.dtype)
+    newmat[::2, ::2] = mat
+    newmat[::2, 1::2] = mat
+    newmat[1::2, ::2] = mat
+    newmat[1::2, 1::2] = mat
 
     return newmat
 
