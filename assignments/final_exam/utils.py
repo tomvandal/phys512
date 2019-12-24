@@ -1,119 +1,164 @@
 """
-Utility functions for the course
+Utility functions for problem 4 of the final exam
 """
-import camb
+import warnings
 import numpy as np
-from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter
 
 
-def xmap(x, a, b):
-    """Re-map x range to [-1, 1] intv to allow chebyshev fit
+def powerspec(y, window=None, smooth_sig=None):
+    """Power Spectrum Density
 
-    Use transformation y=(x - 0.5 * (b+a)) / (0.5 * (b-a)) to map an arbitrary
-    range to [-1, 1]. (from numerical recipes)
+    Obtains power spectrum density from a timeseries, with the option of
+    smoothening with a Gaussian filter.
 
     Args:
-        x (array): x values
+        y           (array): y values of the time series
+        window      (array): array of the window used
+                             (must have same size as y)
+        dt          (float): spacing between samples in time domain
+        smooth_sig (scalar): standard deviation of Gaussian kernel for
+                             smoothing model. Not applied if None (default).
     Returns:
-        xnew (array): x mapped to [-1, 1]
+        powers (array): powers corresponding to PSD of y
     """
-    bpa = 0.5 * (b + a)
-    bma = 0.5 * (b - a)
+    # sanity checks
+    y = np.asarray(y)
+    if window is None:
+        window = np.ones(y.size)
+    else:
+        window = np.asarray(window)
+        assert window.size == y.size, 'window should have the same size as y'
 
-    return (x - bpa) / bma
+    # normalization for window
+    normfac = np.sqrt(np.mean(window**2))
+
+    # get power spectrum
+    yft = np.fft.rfft(y * window) / normfac
+    powers = np.abs(yft)**2
+
+    # apply Gaussian filter to smoothen the spectrum
+    if smooth_sig is not None:
+        powers = gaussian_filter(powers, smooth_sig)
+
+    return powers
 
 
-def get_spectrum(p, lmax_acc=2000, lmax_ret=1200):
-    """Get power spectrum with CAMB
+def matchedfilt(data, templ, noise, window=None):
+    """Matched filtering
+
+    Obtain a matched filter from singal template and data
+
     Args:
-        p (array): parameters H0, ombh2, omch2, tau, As, ns
-        lmax_acc (int): maximum l index for the accuracy of calculations
-        lmax_ret (int): maximum l index for the returned power spectrum
+        data   (array): data values
+        templ  (array): signal template (should have same size as data)
+        noise  (array): noise model (power spectrum)
+        window (array): window for data (should have same size as data)
     Returns:
-        tt: TT power spectrum for multipole indices 2 (quadrupole) to lmax_ret
+        mf (array): matched filter output
     """
-    H0 = p[0]
-    ombh2 = p[1]
-    omch2 = p[2]
-    tau = p[3]
-    As = p[4]
-    ns = p[5]
-    pars = camb.CAMBparams()
-    pars.set_cosmology(H0=H0, ombh2=ombh2, omch2=omch2, omk=0.0, mnu=0.06,
-                       tau=tau)
-    pars.InitPower.set_params(As=As, ns=ns, r=0)
-    pars.set_for_lmax(lmax_acc, lens_potential_accuracy=0)
-    results = camb.get_results(pars)
-    powers = results.get_cmb_power_spectra(pars, CMB_unit='muK', lmax=lmax_ret)
-    cmb = powers['total']
-    tt = cmb[:, 0][2:]  # don't need first to indices
+    # sanity checks
+    data = np.asarray(data)
+    templ = np.asarray(templ)
+    noise = np.asarray(noise)
+    assert templ.size == data.size, ('templ should have the same size as'
+                                     ' data')
+    if window is None:
+        window = np.ones(data.size)
+    else:
+        window = np.asarray(window)
+        assert window.size == data.size, ('window should have the same size'
+                                          ' as data')
 
-    return tt
+    # get normalization for window
+    normfac = np.sqrt(np.mean(window**2))
 
+    # Normalized FT of data and template
+    data_ft = np.fft.rfft(data * window) / (np.sqrt(noise)*normfac)
+    templ_ft = np.fft.rfft(templ * window) / (np.sqrt(noise)*normfac)
 
-def getflat(chains):
-        """
-        Get flat chains from MCMC chain array (for corner plot, e.g.)
-        Args:
-            chains (array): MCMC output chains with shape (nwalk, nsteps, ndim)
-        Returns
-            flatchains (array): flattened chains along walkers axis, with new
-                                shape (nwalk*nsteps, ndim)
-        """
-        s = chains.shape
-        return np.copy(chains.reshape(s[0] * s[1], s[2]))
+    # get matched filter
+    mf = np.fft.irfft(np.conj(templ_ft) * data_ft)
+    mf = np.fft.fftshift(mf)
+
+    return mf
 
 
-def lowres(mat):
-    """Lower resolution of matrix
-    Lower the resolution of an array by a factor of 2 along each dimension.
-    Take the maximum in absolute value, so that mask is conserved and BC
-    is too. This method is not intended for other arrays than BC or masks.
+def newton(fun, gradfun, x, y, pguess, yerr=None, maxit=10, cstol=1e-3,
+           dptol=1e-3):
+    """Use Newton's method to fit a function to noise-free data
+    This methods takes a callable function as an argument and always returns
+    both best fit parameters and their covariance matrix.
     Args:
-        mat (array): 2d array with equal even dimensions along both axes
+        fun     (callable): function to fit with positional arguments
+                            (x, parameters)
+        gradfun (callable): gradient of fun with positional argumetns
+                            (x, parameters)
+        x          (array): x data to fit
+        y          (array): y (noise-free) data to fit
+        yerr       (array): error on y data
+        pguess     (array): initial guess on parameters
+        maxit      (float): maximum number of iterations
+        cstol      (float): maximum chi-sq relative change for convergence
+        dpar       (float): maximum parameter variation for convergence
+
     Returns:
-        newmat (array): lower resolution matrix
+        pars (array): optimized parameters
+        cov  (array): estimate of the parameters covariance
     """
-    # sanity check
-    s = mat.shape
-    assert np.unique(s).size == 1, 'mat must have equal dimensions'
-    assert s[0] % 2 == 0, 'mat must have even dimensions'
+    # check args
+    pguess = np.array(pguess)  # make sure numpy array
+    pars = pguess.copy()
+    maxit = int(maxit)
+    cstol = float(cstol)
+    dptol = float(dptol)
+    x = np.array(x)
+    y = np.array(y)
+    if yerr is None:
+        yerr = np.ones(y.size)
 
-    # split in 2x2 blocks and take abs max of each, then reshape
-    n = s[0]
-    newmat = mat.reshape(n//2, 2, -1, 2).swapaxes(1, 2).reshape(-1, 2, 2)
-    absmax = np.max(np.abs(newmat), axis=(1, 2))
-    truemax = np.max(newmat, axis=(1, 2))
-    truemin = np.min(newmat, axis=(1, 2))
-    newmat = np.where(np.equal(absmax, truemax), truemax, truemin)
-    newmat = newmat.reshape(n//2, n//2)
+    # Perform Newton solver
+    chisq_prev = 1e4  # chi2 initialization
+    for j in range(maxit):
 
-    return newmat
+        pred = fun(x, pars)
+        grad = gradfun(x, pars)
 
+        res = (y - pred) / yerr
+        chisq = np.sum(res**2)  # no ebars => no weights
 
-def _upres(mat):
-    """Increase matrix resolution
-    Increase the resolution of an array by a factor of 2. This will only be
-    used to initialize potential on a grid, so we don't need to care about
-    precise BC/mask. We still use interpolation to make convergence faster.
-    Args:
-        mat (array): 2d array with equal dimensions along both axes
-    Returns:
-        newmat (array): array with higher resolution
-    """
-    # sanity check
-    s = mat.shape
-    assert np.unique(s).size == 1, 'mat must have equal dimensions'
+        # generate matrix objects
+        res = np.matrix(res).T
+        grad = np.matrix(grad)
 
-    # get new interpolated grid with better resolution
-    n = s[0]
-    sizearr = np.linspace(0, n-1, num=n)
-    xx, yy = np.meshgrid(sizearr, sizearr)
-    pts = np.array([xx.ravel(), yy.ravel()]).T
-    sizearr = np.linspace(0, n-1, num=2*n)
-    xx, yy = np.meshgrid(sizearr, sizearr)
-    ipts = np.array([xx.ravel(), yy.ravel()]).T
-    newmat = griddata(pts, mat.ravel(), ipts, method='cubic')
-    newmat = newmat.reshape(2*n, 2*n)
+        # solve linear system
+        lhs = grad.T * grad
+        rhs = grad.T * res
+        dpars = np.linalg.inv(lhs) * (rhs)
+        dpars = np.asarray(dpars).flatten()
+        for k in range(pguess.size):
+            pars[k] = pars[k] + dpars[k]
 
-    return newmat
+        # convergence check
+        csdiff = (chisq_prev - chisq) / chisq
+        dprel = np.max(np.abs(dpars/pars))
+        if j > 0 and csdiff < cstol and dprel < dptol:
+            print("The Newton Method converged after {} iterations".format(j))
+            break
+        if j == maxit-1:
+            msg = ("maxiter was reached without convergence... "
+                   "params may be poorly constained")
+            warnings.warn(msg, RuntimeWarning)
+
+        chisq_prev = chisq
+
+    # estimate of parameters covariance
+    finpred = fun(x, pars)
+    fingrad = gradfun(x, pars)
+    finres = y - finpred
+    invnoise = np.diag(finres**(-2))   # assume noise on each pt is residuals
+    tmp = np.dot(fingrad.T, invnoise)  # compute covariance matrix
+    invcov = np.dot(tmp, fingrad)
+    cov = np.linalg.inv(invcov)
+
+    return pars, cov
