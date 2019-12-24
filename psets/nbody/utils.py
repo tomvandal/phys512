@@ -199,3 +199,19 @@ def density3d(model, niter=50, show=True, savepath=None,
             anim.save(savepath, writer='imagemagick')
     if show:
         plt.show()
+
+
+def eplot(efile):
+    """Plot energy vs step number
+    Args:
+        efile (str): string output from energy txt file
+    """
+
+    steps = efile.split('\n')[:-1]  # last line empty
+    egy = np.array([e.split(' ')[-1] for e in steps], dtype=float)
+    emin = egy.min()
+    plt.plot(egy-emin)
+    plt.xlabel('Step', fontsize=14)
+    plt.ylabel('Energy + {:.2f}'.format(-emin), fontsize=14)
+    plt.title('Energy conservation', fontsize=16)
+    plt.show()
